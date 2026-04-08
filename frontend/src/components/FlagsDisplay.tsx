@@ -14,9 +14,9 @@ export default function FlagsDisplay({ flags }: FlagsDisplayProps) {
         <Alert.Title>Uncertain Phrases Detected</Alert.Title>
         <Alert.Description>
           <Text mb={1}>The following phrases may indicate uncertainty:</Text>
-          <List.Root>
+          <List.Root listStyleType={"none"}>
             {flags.map((flag, index) => (
-              <List.Item key={index}>{flag}</List.Item>
+              <List.Item key={index}>{flag} </List.Item>
             ))}
           </List.Root>
         </Alert.Description>

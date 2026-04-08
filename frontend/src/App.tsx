@@ -5,11 +5,12 @@ import SOAPForm from "./components/SOAPForm";
 import ConfidenceBadge from "./components/ConfidenceBadge";
 import FlagsDisplay from "./components/FlagsDisplay";
 import Disclaimer from "./components/Disclaimer";
-import { generateNote } from "./api/noteService";
+import { generateNote, formatSOAPText } from "./api/noteService";
 import type { NoteResponse } from "./api/noteService";
 
 function App() {
   const [isLoading, setIsLoading] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [error, setError] = useState<string | null>(null);
   const [lastRawInput, setLastRawInput] = useState("");
   const [soapData, setSoapData] = useState<NoteResponse | null>(null);
@@ -42,6 +43,12 @@ function App() {
 
   const handleRegenerate = () => {
     if (lastRawInput) handleGenerate(lastRawInput);
+  };
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(formatSOAPText(soapFields));
+    setCopyState("copied");
+    setTimeout(() => setCopyState("idle"), 2000);
   };
 
   const handleFieldChange = (
@@ -100,6 +107,18 @@ function App() {
               {soapData && (
                 <Button
                   mt={4}
+                  colorPalette="teal"
+                  variant="outline"
+                  onClick={handleCopy}
+                  disabled={isLoading}
+                >
+                  {copyState === "copied" ? "Copied!" : "Copy to Clipboard"}
+                </Button>
+              )}
+              {soapData && (
+                <Button
+                  mt={4}
+                  ml={2}
                   colorPalette="teal"
                   variant="outline"
                   onClick={handleRegenerate}
