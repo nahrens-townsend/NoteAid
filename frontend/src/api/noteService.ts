@@ -25,3 +25,7 @@ export async function generateNote(rawInput: string): Promise<NoteResponse> {
 
   return response.json() as Promise<NoteResponse>;
 }
+
+export function formatSOAPText(fields: Pick<NoteResponse, "subjective" | "objective" | "assessment" | "plan">): string {
+  return `Subjective:\n${fields.subjective}\n\nObjective:\n${fields.objective}\n\nAssessment:\n${fields.assessment}\n\nPlan:\n${fields.plan}`;
+}
