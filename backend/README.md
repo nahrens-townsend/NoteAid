@@ -1,24 +1,41 @@
-# README
+# NoteAid — Backend
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+Rails API that receives note generation requests from the frontend, forwards them to the AI service, persists the result, and returns the structured SOAP note. Runs on **port 3000**.
 
-Things you may want to cover:
+## Prerequisites
 
-* Ruby version
+- Ruby 3.2+
+- Bundler (`gem install bundler`)
 
-* System dependencies
+## Setup
 
-* Configuration
+```bash
+cd backend
+bundle install
+bin/rails db:migrate
+```
 
-* Database creation
+## Environment variables
 
-* Database initialization
+Create a `.env` file (or set these in your shell):
 
-* How to run the test suite
+```
+AI_SERVICE_URL=http://localhost:8000
+```
 
-* Services (job queues, cache servers, search engines, etc.)
+## Run
 
-* Deployment instructions
+```bash
+bin/rails server
+```
 
-* ...
+The API will be available at [http://localhost:3000](http://localhost:3000).
+
+### Key endpoint
+
+```
+POST /api/v1/generate-note
+Content-Type: application/json
+
+{ "raw_input": "..." }
+```
