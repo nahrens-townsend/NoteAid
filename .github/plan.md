@@ -21,11 +21,13 @@ A lightweight AI-assisted clinical documentation tool that converts unstructured
 ## JSON Contract
 
 **Input to FastAPI:**
+
 ```json
 { "raw_input": "string" }
 ```
 
 **Output from FastAPI (and Rails):**
+
 ```json
 {
   "subjective": "string",
@@ -133,7 +135,7 @@ NoteAid/
 15. **`SOAPForm.tsx`** — Four editable `Textarea` fields (Subjective, Objective, Assessment, Plan), pre-filled from API response, user can edit before any further use
 16. **`ConfidenceBadge.tsx`** — `Badge` + `Progress` bar showing `confidence` percentage (color: green ≥0.8, yellow ≥0.5, red <0.5)
 17. **`FlagsDisplay.tsx`** — `Alert` (warning) listing each flag phrase if `flags.length > 0`
-18. **`Disclaimer.tsx`** — Sticky bottom banner: *"Not medical advice. Always review and verify AI-generated notes."*
+18. **`Disclaimer.tsx`** — Sticky bottom banner: _"Not medical advice. Always review and verify AI-generated notes."_
 19. **`api/noteService.ts`** — `generateNote(rawInput: string): Promise<NoteResponse>` — POST to `http://localhost:3000/api/v1/generate-note`, typed with interface matching JSON contract
 20. **State wiring:** on submit → call API → populate `SOAPForm` + `ConfidenceBadge` + `FlagsDisplay`. "Regenerate" button re-triggers same call with current `rawInput`
 
@@ -165,6 +167,7 @@ NoteAid/
 - Real EMR integration
 - Advanced NLP beyond Gemini prompt
 - Complex database schema
+- Export SOAP note to document (pdf, word, etc.)
 
 ---
 

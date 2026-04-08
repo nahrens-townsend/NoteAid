@@ -1,121 +1,122 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState } from "react";
+import { Alert, Box, Button, Grid, GridItem, Heading } from "@chakra-ui/react";
+import NoteInput from "./components/NoteInput";
+import SOAPForm from "./components/SOAPForm";
+import ConfidenceBadge from "./components/ConfidenceBadge";
+import FlagsDisplay from "./components/FlagsDisplay";
+import Disclaimer from "./components/Disclaimer";
+import { generateNote } from "./api/noteService";
+import type { NoteResponse } from "./api/noteService";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastRawInput, setLastRawInput] = useState("");
+  const [soapData, setSoapData] = useState<NoteResponse | null>(null);
+  const [soapFields, setSoapFields] = useState({
+    subjective: "",
+    objective: "",
+    assessment: "",
+    plan: "",
+  });
+
+  const handleGenerate = async (rawInput: string) => {
+    setLastRawInput(rawInput);
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await generateNote(rawInput);
+      setSoapData(result);
+      setSoapFields({
+        subjective: result.subjective,
+        objective: result.objective,
+        assessment: result.assessment,
+        plan: result.plan,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegenerate = () => {
+    if (lastRawInput) handleGenerate(lastRawInput);
+  };
+
+  const handleFieldChange = (
+    field: "subjective" | "objective" | "assessment" | "plan",
+    value: string,
+  ) => {
+    setSoapFields((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <Box>
+      <Box minH="100vh" bg="gray.50" p={6} pb={20}>
+        <Heading as="h1" size="xl" mb={6} textAlign="center" color="teal.700">
+          NoteAid
+        </Heading>
+        <Grid
+          templateColumns={{ base: "1fr", md: "1fr 1fr" }}
+          gap={6}
+          alignItems="start"
         >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+          <GridItem>
+            <Box bg="white" borderRadius="md" boxShadow="sm" p={6}>
+              <NoteInput onGenerate={handleGenerate} isLoading={isLoading} />
+            </Box>
+          </GridItem>
+          <GridItem>
+            <Box bg="white" borderRadius="md" boxShadow="sm" p={6}>
+              <Heading as="h2" size="md" mb={4} color="gray.700">
+                SOAP Note
+              </Heading>
+              {error && (
+                <Alert.Root status="error" mb={4}>
+                  <Alert.Indicator />
+                  <Alert.Content>
+                    <Alert.Description>{error}</Alert.Description>
+                  </Alert.Content>
+                </Alert.Root>
+              )}
+              {soapData && (
+                <Box mb={4}>
+                  <ConfidenceBadge confidence={soapData.confidence} />
+                </Box>
+              )}
+              {soapData && soapData.flags.length > 0 && (
+                <Box mb={4}>
+                  <FlagsDisplay flags={soapData.flags} />
+                </Box>
+              )}
+              <SOAPForm
+                subjective={soapFields.subjective}
+                objective={soapFields.objective}
+                assessment={soapFields.assessment}
+                plan={soapFields.plan}
+                onChange={handleFieldChange}
+              />
+              {soapData && (
+                <Button
+                  mt={4}
+                  colorPalette="teal"
+                  variant="outline"
+                  onClick={handleRegenerate}
+                  loading={isLoading}
+                  loadingText="Regenerating..."
+                  disabled={isLoading}
                 >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+                  Regenerate
+                </Button>
+              )}
+            </Box>
+          </GridItem>
+        </Grid>
+      </Box>
+      <Disclaimer />
+    </Box>
+  );
 }
 
-export default App
+export default App;

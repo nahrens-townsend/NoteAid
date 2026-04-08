@@ -25,10 +25,6 @@ module Api
           if response.success?
             ai_data = response.body
 
-            # rescue AciveRecord::RecordInvalid => e
-            # render json: { error: "Failed to save note: #{e.message}" }, status: :unprocessable_entity
-            # 
-            
             note = Note.new(
               raw_input:   raw_input,
               subjective:  ai_data["subjective"],
@@ -53,7 +49,8 @@ module Api
               render json: { error: "Failed to save note", errors: note.errors.full_messages }, status: :unprocessable_entity
             end
           else
-            render json: { error: "AI service returned an error" }, status: :bad_gateway
+            error_message = response.body.is_a?(Hash) ? response.body.dig("detail", 0, "msg") || response.body["detail"].to_s : "AI service returned an error"
+            render json: { error: error_message }, status: response.status
           end
 
         rescue Faraday::ConnectionFailed, Faraday::TimeoutError => e

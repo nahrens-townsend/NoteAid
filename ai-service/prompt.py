@@ -22,4 +22,4 @@ Clinical note:
 
 
 def build_prompt(raw_input: str) -> str:
-    return SOAP_PROMPT_TEMPLATE.format(raw_input=raw_input)
+    return SOAP_PROMPT_TEMPLATE.replace("{raw_input}", raw_input)
