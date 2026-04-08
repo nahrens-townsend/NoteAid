@@ -21,3 +21,12 @@ venv/
 
 # Env
 .env
+
+# Ruby / Rails
+backend/config/master.key
+backend/tmp/
+backend/log/
+backend/storage/*.sqlite3
+backend/storage/*.sqlite3-shm
+backend/storage/*.sqlite3-wal
+backend/.bundle/
