@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Alert, Box, Button, Grid, GridItem, Heading } from "@chakra-ui/react";
 import NoteInput from "./components/NoteInput";
 import SOAPForm from "./components/SOAPForm";
@@ -7,8 +7,10 @@ import FlagsDisplay from "./components/FlagsDisplay";
 import Disclaimer from "./components/Disclaimer";
 import { generateNote, formatSOAPText } from "./api/noteService";
 import type { NoteResponse } from "./api/noteService";
+import { useVoiceTranscription } from "./hooks/useVoiceTranscription";
 
 function App() {
+  const [rawInput, setRawInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +43,21 @@ function App() {
     }
   };
 
+  const handleFinalTranscript = useCallback((finalText: string) => {
+    setRawInput((prev) => prev + (prev.trim() ? " " : "") + finalText);
+  }, []);
+
+  const {
+    isRecording,
+    isConnecting,
+    start,
+    stop,
+    error: voiceError,
+    partialTranscript,
+  } = useVoiceTranscription({
+    onFinal: handleFinalTranscript,
+  });
+
   const handleRegenerate = () => {
     if (lastRawInput) handleGenerate(lastRawInput);
   };
@@ -71,7 +88,18 @@ function App() {
         >
           <GridItem>
             <Box bg="white" borderRadius="md" boxShadow="sm" p={6}>
-              <NoteInput onGenerate={handleGenerate} isLoading={isLoading} />
+              <NoteInput
+                onGenerate={handleGenerate}
+                isLoading={isLoading}
+                value={rawInput}
+                onChange={setRawInput}
+                partialTranscript={partialTranscript}
+                isRecording={isRecording}
+                isConnecting={isConnecting}
+                onStart={start}
+                onStop={stop}
+                voiceError={voiceError}
+              />
             </Box>
           </GridItem>
           <GridItem>

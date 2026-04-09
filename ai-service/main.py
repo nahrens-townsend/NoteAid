@@ -1,10 +1,13 @@
+import asyncio
 import json
 import os
 import re
 
 import google.generativeai as genai
+import websockets
+import websockets.asyncio.client
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 
 from prompt import build_prompt
 from schema import NoteRequest, NoteResponse
@@ -120,3 +123,71 @@ def process_note(request: NoteRequest) -> NoteResponse:
         confidence=float(confidence),
         flags=flags,
     )
+
+
+_DEEPGRAM_URL = (
+    "wss://api.deepgram.com/v1/listen"
+    "?model=nova-2-medical"
+    "&interim_results=true"
+    "&punctuate=true"
+    "&smart_format=true"
+)
+
+
+@app.websocket("/ws/transcribe")
+async def ws_transcribe(websocket: WebSocket) -> None:
+    """Receive binary audio chunks and return partial/final transcript frames.
+
+    Frame format sent to client:
+        {"type": "partial" | "final", "text": "..."}
+
+    Audio forwarded to Deepgram nova-2-medical via their streaming WebSocket API.
+    """
+    await websocket.accept()
+    api_key = os.environ["DEEPGRAM_API_KEY"]
+
+    try:
+        async with websockets.asyncio.client.connect(
+            _DEEPGRAM_URL,
+            additional_headers={"Authorization": f"Token {api_key}"},
+        ) as dg_ws:
+
+            async def relay_deepgram_to_client() -> None:
+                async for raw in dg_ws:
+                    try:
+                        data = json.loads(raw)
+                        if data.get("type") != "Results":
+                            continue
+                        alts = data.get("channel", {}).get("alternatives", [])
+                        transcript = alts[0].get("transcript", "") if alts else ""
+                        is_final = data.get("is_final", False)
+                        await websocket.send_text(
+                            json.dumps(
+                                {
+                                    "type": "final" if is_final else "partial",
+                                    "text": transcript,
+                                }
+                            )
+                        )
+                    except (json.JSONDecodeError, KeyError, IndexError):
+                        pass
+
+            relay_task = asyncio.create_task(relay_deepgram_to_client())
+            try:
+                while True:
+                    chunk: bytes = await websocket.receive_bytes()
+                    await dg_ws.send(chunk)
+            except WebSocketDisconnect:
+                pass
+            finally:
+                relay_task.cancel()
+                try:
+                    await relay_task
+                except asyncio.CancelledError:
+                    pass
+
+    except Exception as exc:
+        try:
+            await websocket.close(code=1011, reason=str(exc))
+        except Exception:
+            pass
