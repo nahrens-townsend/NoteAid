@@ -1,5 +1,6 @@
 import { Button, Flex, Heading, Stack, Text, Textarea } from "@chakra-ui/react";
 import VoiceRecordButton from "./VoiceRecordButton";
+import SampleInputSelector from "./SampleInputSelector";
 
 interface NoteInputProps {
   onGenerate: (rawInput: string) => void;
@@ -45,6 +46,7 @@ export default function NoteInput({
           error={voiceError}
         />
       </Flex>
+      <SampleInputSelector onInsert={onChange} />
       <Textarea
         placeholder="Enter unstructured clinical notes here..."
         value={value}
