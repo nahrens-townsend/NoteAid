@@ -18,8 +18,7 @@ services:
     plan: free
     rootDir: backend
     buildCommand: bundle install
-    startCommand: bundle exec puma -C config/puma.rb
-    preDeployCommand: bundle exec rails db:migrate
+    startCommand: bundle exec rails db:migrate && bundle exec puma -C config/puma.rb
     envVars:
       - key: RAILS_ENV
         value: production
