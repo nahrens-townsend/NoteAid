@@ -9,6 +9,7 @@ import { generateNote, formatSOAPText } from "./api/noteService";
 import type { NoteResponse } from "./api/noteService";
 
 function App() {
+  const [rawInput, setRawInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +72,12 @@ function App() {
         >
           <GridItem>
             <Box bg="white" borderRadius="md" boxShadow="sm" p={6}>
-              <NoteInput onGenerate={handleGenerate} isLoading={isLoading} />
+              <NoteInput
+                onGenerate={handleGenerate}
+                isLoading={isLoading}
+                value={rawInput}
+                onChange={setRawInput}
+              />
             </Box>
           </GridItem>
           <GridItem>

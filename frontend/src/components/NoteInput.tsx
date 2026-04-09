@@ -1,16 +1,20 @@
-import { useState } from "react";
 import { Button, Textarea, Stack, Text, Heading } from "@chakra-ui/react";
 
 interface NoteInputProps {
   onGenerate: (rawInput: string) => void;
   isLoading: boolean;
+  value: string;
+  onChange: (val: string) => void;
 }
 
-export default function NoteInput({ onGenerate, isLoading }: NoteInputProps) {
-  const [rawInput, setRawInput] = useState("");
-
+export default function NoteInput({
+  onGenerate,
+  isLoading,
+  value,
+  onChange,
+}: NoteInputProps) {
   const handleSubmit = () => {
-    onGenerate(rawInput);
+    onGenerate(value);
   };
 
   return (
@@ -20,8 +24,8 @@ export default function NoteInput({ onGenerate, isLoading }: NoteInputProps) {
       </Heading>
       <Textarea
         placeholder="Enter unstructured clinical notes here..."
-        value={rawInput}
-        onChange={(e) => setRawInput(e.target.value)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         rows={12}
         resize="vertical"
       />
@@ -30,7 +34,7 @@ export default function NoteInput({ onGenerate, isLoading }: NoteInputProps) {
         onClick={handleSubmit}
         loading={isLoading}
         loadingText="Generating..."
-        disabled={isLoading || rawInput.trim().length < 10}
+        disabled={isLoading || value.trim().length < 10}
       >
         Generate SOAP Note
       </Button>
