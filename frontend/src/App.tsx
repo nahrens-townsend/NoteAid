@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Alert, Box, Button, Grid, GridItem, Heading } from "@chakra-ui/react";
 import NoteInput from "./components/NoteInput";
 import SOAPForm from "./components/SOAPForm";
@@ -7,6 +7,7 @@ import FlagsDisplay from "./components/FlagsDisplay";
 import Disclaimer from "./components/Disclaimer";
 import { generateNote, formatSOAPText } from "./api/noteService";
 import type { NoteResponse } from "./api/noteService";
+import { useVoiceTranscription } from "./hooks/useVoiceTranscription";
 
 function App() {
   const [rawInput, setRawInput] = useState("");
@@ -41,6 +42,14 @@ function App() {
       setIsLoading(false);
     }
   };
+
+  const handleFinalTranscript = useCallback((finalText: string) => {
+    setRawInput((prev) => prev + (prev.trim() ? " " : "") + finalText);
+  }, []);
+
+  const { isRecording, start, stop, error: voiceError, partialTranscript } = useVoiceTranscription({
+    onFinal: handleFinalTranscript,
+  });
 
   const handleRegenerate = () => {
     if (lastRawInput) handleGenerate(lastRawInput);
@@ -77,6 +86,11 @@ function App() {
                 isLoading={isLoading}
                 value={rawInput}
                 onChange={setRawInput}
+                partialTranscript={partialTranscript}
+                isRecording={isRecording}
+                onStart={start}
+                onStop={stop}
+                voiceError={voiceError}
               />
             </Box>
           </GridItem>

@@ -1,10 +1,16 @@
-import { Button, Textarea, Stack, Text, Heading } from "@chakra-ui/react";
+import { Button, Flex, Heading, Stack, Text, Textarea } from "@chakra-ui/react";
+import VoiceRecordButton from "./VoiceRecordButton";
 
 interface NoteInputProps {
   onGenerate: (rawInput: string) => void;
   isLoading: boolean;
   value: string;
   onChange: (val: string) => void;
+  partialTranscript: string;
+  isRecording: boolean;
+  onStart: () => void;
+  onStop: () => void;
+  voiceError: string | null;
 }
 
 export default function NoteInput({
@@ -12,6 +18,11 @@ export default function NoteInput({
   isLoading,
   value,
   onChange,
+  partialTranscript,
+  isRecording,
+  onStart,
+  onStop,
+  voiceError,
 }: NoteInputProps) {
   const handleSubmit = () => {
     onGenerate(value);
@@ -19,9 +30,18 @@ export default function NoteInput({
 
   return (
     <Stack gap={3}>
-      <Heading as="h2" size="md" mb={4} color="gray.700">
-        Raw Clinical Notes
-      </Heading>
+      <Flex align="center" justify="space-between" mb={4}>
+        <Heading as="h2" size="md" color="gray.700">
+          Raw Clinical Notes
+        </Heading>
+        <VoiceRecordButton
+          isRecording={isRecording}
+          isLoading={isLoading}
+          onStart={onStart}
+          onStop={onStop}
+          error={voiceError}
+        />
+      </Flex>
       <Textarea
         placeholder="Enter unstructured clinical notes here..."
         value={value}
@@ -29,6 +49,11 @@ export default function NoteInput({
         rows={12}
         resize="vertical"
       />
+      {isRecording && partialTranscript && (
+        <Text color="gray.400" fontStyle="italic" fontSize="sm">
+          {partialTranscript}
+        </Text>
+      )}
       <Button
         colorPalette="blue"
         onClick={handleSubmit}
