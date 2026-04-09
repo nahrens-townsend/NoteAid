@@ -18,6 +18,12 @@ genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 app = FastAPI(title="NoteAid AI Service")
 
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
 _RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
