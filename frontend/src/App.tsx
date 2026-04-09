@@ -47,7 +47,14 @@ function App() {
     setRawInput((prev) => prev + (prev.trim() ? " " : "") + finalText);
   }, []);
 
-  const { isRecording, start, stop, error: voiceError, partialTranscript } = useVoiceTranscription({
+  const {
+    isRecording,
+    isConnecting,
+    start,
+    stop,
+    error: voiceError,
+    partialTranscript,
+  } = useVoiceTranscription({
     onFinal: handleFinalTranscript,
   });
 
@@ -88,6 +95,7 @@ function App() {
                 onChange={setRawInput}
                 partialTranscript={partialTranscript}
                 isRecording={isRecording}
+                isConnecting={isConnecting}
                 onStart={start}
                 onStop={stop}
                 voiceError={voiceError}

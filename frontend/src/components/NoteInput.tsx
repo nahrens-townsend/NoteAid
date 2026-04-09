@@ -8,6 +8,7 @@ interface NoteInputProps {
   onChange: (val: string) => void;
   partialTranscript: string;
   isRecording: boolean;
+  isConnecting: boolean;
   onStart: () => void;
   onStop: () => void;
   voiceError: string | null;
@@ -20,6 +21,7 @@ export default function NoteInput({
   onChange,
   partialTranscript,
   isRecording,
+  isConnecting,
   onStart,
   onStop,
   voiceError,
@@ -36,6 +38,7 @@ export default function NoteInput({
         </Heading>
         <VoiceRecordButton
           isRecording={isRecording}
+          isConnecting={isConnecting}
           isLoading={isLoading}
           onStart={onStart}
           onStop={onStop}
@@ -59,7 +62,9 @@ export default function NoteInput({
         onClick={handleSubmit}
         loading={isLoading}
         loadingText="Generating..."
-        disabled={isLoading || value.trim().length < 10}
+        disabled={
+          isLoading || isRecording || isConnecting || value.trim().length < 10
+        }
       >
         Generate SOAP Note
       </Button>

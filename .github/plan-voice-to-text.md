@@ -7,7 +7,7 @@
 - **Connection:** Direct browser → (Phase 4) FastAPI. Rails is not involved in transcription at any phase.
 - **State lift required:** `rawInput` is currently local to `NoteInput.tsx` and must be lifted to `App.tsx`.
 
-> **HIPAA note:** Web Speech API in Chrome sends audio to Google's servers. If PHI handling requirements are strict, Phase 4 with a HIPAA-compliant provider (AssemblyAI Healthcare or on-prem Whisper) must be implemented before production deployment.
+> **HIPAA note:** Phase 4 is now implemented — audio is captured via `MediaRecorder` in the browser and streamed to the FastAPI backend over WebSocket, then forwarded to Deepgram (`nova-2-medical`). Audio is no longer sent to Google. The HIPAA risk depends on the cloud STT provider plugged into `ws_transcribe`: Deepgram offers a BAA and is suitable for PHI workloads. If switching providers, verify BAA availability before production deployment.
 
 ---
 
@@ -101,3 +101,16 @@ setRawInput((prev) => prev + (prev.trim() ? " " : "") + finalText);
 | 2     | Live transcription appending to raw notes field via Web Speech API |
 | 3     | VoiceRecordButton, recording indicator, partial transcript preview |
 | 4     | FastAPI WebSocket endpoint + MediaRecorder for cloud provider swap |
+
+---
+
+## Future Considerations — Production & HIPAA Readiness
+
+The current implementation is suitable for development and internal demos. Before handling real patient data in a clinical environment, the following should be addressed:
+
+1. **Deploy behind HTTPS/WSS with a valid TLS cert** — the WebSocket must use `wss://` in production; plain `ws://` transmits audio unencrypted and violates HIPAA Technical Safeguards.
+2. **Sign a Deepgram BAA** — Deepgram offers a Business Associate Agreement, but it must be formally executed before any PHI is sent to their API.
+3. **Enable zero data retention in Deepgram project settings** — by default Deepgram retains audio and transcripts for up to 30 days; configure the project for zero retention or pass `redact=true` to avoid storing PHI beyond what is necessary.
+4. **Add auth to the WebSocket endpoint** — `ws_transcribe` currently has no authentication; in production it should validate a short-lived JWT or session token on the WebSocket upgrade request.
+5. **Add session audit logging to the FastAPI service** — HIPAA requires an audit trail of PHI access; log session identity, timestamps, and transcription events without persisting the transcript content itself.
+6. **Move the API key to a secrets manager** — the Deepgram (and Gemini) API keys should be injected at runtime via a secrets manager (e.g. AWS Secrets Manager, Azure Key Vault) rather than stored in a `.env` file on disk.

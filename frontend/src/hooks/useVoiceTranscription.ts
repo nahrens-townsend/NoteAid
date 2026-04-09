@@ -6,121 +6,125 @@ export interface UseVoiceTranscriptionOptions {
 
 export interface UseVoiceTranscriptionResult {
   isRecording: boolean;
+  isConnecting: boolean;
   start: () => void;
   stop: () => void;
   partialTranscript: string;
   error: string | null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnySpeechRecognition = any;
-
-function getSpeechRecognition(): (new () => AnySpeechRecognition) | null {
-  if (typeof window === "undefined") return null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const w = window as any;
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
-}
-
-function mapErrorCode(code: string): string {
-  switch (code) {
-    case "not-allowed":
-      return "Microphone access was denied. Please allow microphone permission and try again.";
-    case "no-speech":
-      return "No speech was detected. Please try again.";
-    case "network":
-      return "A network error occurred during transcription. Please check your connection.";
-    default:
-      return `Speech recognition error: ${code}`;
-  }
-}
+const WS_URL =
+  (import.meta.env.VITE_AI_WS_URL as string) ??
+  "ws://127.0.0.1:8000/ws/transcribe";
 
 export function useVoiceTranscription(
   options: UseVoiceTranscriptionOptions,
 ): UseVoiceTranscriptionResult {
   const [isRecording, setIsRecording] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [partialTranscript, setPartialTranscript] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const recognitionRef = useRef<AnySpeechRecognition | null>(null);
-  const isRecordingRef = useRef(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const socketRef = useRef<WebSocket | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const onFinalRef = useRef(options.onFinal);
-  const startRecognitionRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     onFinalRef.current = options.onFinal;
   }, [options.onFinal]);
 
-  const startRecognition = useCallback(() => {
-    const SpeechRecognitionCtor = getSpeechRecognition();
-    if (!SpeechRecognitionCtor) return;
-
-    const recognition = new SpeechRecognitionCtor();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event: AnySpeechRecognition) => {
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          onFinalRef.current(result[0].transcript);
-        } else {
-          interim += result[0].transcript;
-        }
-      }
-      setPartialTranscript(interim);
-    };
-
-    recognition.onend = () => {
-      if (isRecordingRef.current) {
-        startRecognitionRef.current?.();
-      } else {
-        setPartialTranscript("");
-      }
-    };
-
-    recognition.onerror = (event: AnySpeechRecognition) => {
-      setError(mapErrorCode(event.error));
-      setIsRecording(false);
-      isRecordingRef.current = false;
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  }, []);
-
-  useEffect(() => {
-    startRecognitionRef.current = startRecognition;
-  }, [startRecognition]);
-
-  const start = useCallback(() => {
-    const SpeechRecognitionCtor = getSpeechRecognition();
-    if (!SpeechRecognitionCtor) {
-      setError("Voice input requires Chrome or Edge.");
-      return;
-    }
-    setError(null);
-    setIsRecording(true);
-    isRecordingRef.current = true;
-    startRecognition();
-  }, [startRecognition]);
-
   const stop = useCallback(() => {
-    isRecordingRef.current = false;
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+
+    socketRef.current?.close();
+    socketRef.current = null;
+
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+
+    setIsConnecting(false);
     setIsRecording(false);
-    recognitionRef.current?.stop();
-    recognitionRef.current = null;
     setPartialTranscript("");
   }, []);
 
+  const start = useCallback(async () => {
+    setError(null);
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setError(
+        "Microphone access was denied. Please allow microphone permission and try again.",
+      );
+      return;
+    }
+
+    setIsConnecting(true);
+
+    const ws = new WebSocket(WS_URL);
+    ws.binaryType = "arraybuffer";
+
+    ws.onerror = () => {
+      setError("Could not connect to the transcription service.");
+      stop();
+    };
+
+    ws.onmessage = (event: MessageEvent<string>) => {
+      try {
+        const frame = JSON.parse(event.data) as {
+          type: "partial" | "final";
+          text: string;
+        };
+        if (frame.type === "partial") {
+          setPartialTranscript(frame.text);
+        } else if (frame.type === "final") {
+          setPartialTranscript("");
+          if (frame.text) {
+            onFinalRef.current(frame.text);
+          }
+        }
+      } catch {
+        // ignore malformed frames
+      }
+    };
+
+    ws.onopen = () => {
+      const recorder = new MediaRecorder(stream);
+
+      recorder.ondataavailable = (e: BlobEvent) => {
+        if (ws.readyState === WebSocket.OPEN && e.data.size > 0) {
+          e.data.arrayBuffer().then((buf) => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(buf);
+            }
+          });
+        }
+      };
+
+      recorder.onstop = () => {
+        ws.close();
+      };
+
+      mediaRecorderRef.current = recorder;
+      streamRef.current = stream;
+      socketRef.current = ws;
+
+      recorder.start(250); // emit chunks every 250 ms
+      setIsConnecting(false);
+      setIsRecording(true);
+    };
+  }, [stop]);
+
   useEffect(() => {
     return () => {
-      isRecordingRef.current = false;
-      recognitionRef.current?.stop();
+      mediaRecorderRef.current?.stop();
+      socketRef.current?.close();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
     };
   }, []);
 
-  return { isRecording, start, stop, partialTranscript, error };
+  return { isRecording, isConnecting, start, stop, partialTranscript, error };
 }

@@ -2,16 +2,18 @@ import { Box, Button, Text, Tooltip } from "@chakra-ui/react";
 
 interface VoiceRecordButtonProps {
   isRecording: boolean;
+  isConnecting: boolean;
   isLoading: boolean;
   onStart: () => void;
   onStop: () => void;
   error: string | null;
 }
 
-const isSpeechRecognitionSupported = (): boolean => {
+const isMediaRecorderSupported = (): boolean => {
   if (typeof window === "undefined") return false;
-  const w = window as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-  return !!(w.SpeechRecognition ?? w.webkitSpeechRecognition);
+  return !!(
+    typeof MediaRecorder !== "undefined" && navigator.mediaDevices?.getUserMedia
+  );
 };
 
 const pulseKeyframes = `
@@ -23,19 +25,22 @@ const pulseKeyframes = `
 
 export default function VoiceRecordButton({
   isRecording,
+  isConnecting,
   isLoading,
   onStart,
   onStop,
   error,
 }: VoiceRecordButtonProps) {
-  const supported = isSpeechRecognitionSupported();
+  const supported = isMediaRecorderSupported();
 
   const button = (
     <Button
       variant="outline"
       colorPalette={isRecording ? "red" : "gray"}
       onClick={isRecording ? onStop : onStart}
-      disabled={!supported || isLoading}
+      disabled={!supported || isLoading || isConnecting}
+      loading={isConnecting}
+      loadingText="Connecting..."
       size="sm"
     >
       {isRecording && (
@@ -68,7 +73,9 @@ export default function VoiceRecordButton({
               {button}
             </Box>
           </Tooltip.Trigger>
-          <Tooltip.Content>Voice input requires Chrome or Edge</Tooltip.Content>
+          <Tooltip.Content>
+            Voice input is not supported in this browser
+          </Tooltip.Content>
         </Tooltip.Root>
       )}
       {error && (
